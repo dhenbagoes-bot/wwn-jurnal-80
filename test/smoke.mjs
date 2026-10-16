@@ -104,8 +104,43 @@ const Utilities = {
 };
 const Session = { getScriptTimeZone: () => 'Asia/Jakarta' };
 
+// ---------- Stub DriveApp ----------
+const DriveApp = {
+  Access: { ANYONE_WITH_LINK: 'ANYONE_WITH_LINK' },
+  Permission: { VIEW: 'VIEW' },
+  _folders: {},
+  getFoldersByName(name) {
+    const list = this._folders[name] ? [this._folders[name]] : [];
+    let i = 0;
+    return { hasNext: () => i < list.length, next: () => list[i++] };
+  },
+  createFolder(name) {
+    const folder = {
+      _files: [],
+      setSharing() {},
+      createFile(blob) {
+        const file = {
+          _id: 'file_' + Math.random().toString(36).slice(2, 10),
+          _blob: blob,
+          getId() { return this._id; },
+          setSharing() {},
+        };
+        folder._files.push(file);
+        return file;
+      },
+    };
+    this._folders[name] = folder;
+    return folder;
+  },
+};
+const UtilitiesWithDrive = {
+  ...Utilities,
+  base64Decode: (s) => Buffer.from(s, 'base64'),
+  newBlob: (bytes, mimeType, name) => ({ bytes, mimeType, name }),
+};
+
 // ---------- Jalankan Kode.gs di sandbox ----------
-const ctx = vm.createContext({ SpreadsheetApp, ContentService, Utilities, Session, console });
+const ctx = vm.createContext({ SpreadsheetApp, ContentService, Utilities: UtilitiesWithDrive, Session, DriveApp, console });
 vm.runInContext(src, ctx, { filename: 'Kode.gs' });
 
 // Helper: panggil doPost/doGet lalu parse JSON respons
@@ -238,6 +273,23 @@ eq(nilMat[0].na, 60, 'NA setelah replace = 60');
 console.log('\n[8] aksi tidak dikenal');
 r = post('aksiNgawur', {});
 ok(!r.success, 'aksi tidak dikenal → error rapi');
+
+console.log('\n[9] uploadLogo ke Drive (stub)');
+const tinyPng = Buffer.from([0x89,0x50,0x4e,0x47,0x0d,0x0a,0x1a,0x0a]).toString('base64');
+r = post('uploadLogo', { fileName: 'logo.png', base64Data: '', mimeType: 'image/png' });
+ok(!r.success, 'data kosong ditolak');
+r = post('uploadLogo', { fileName: 'logo.txt', base64Data: tinyPng, mimeType: 'text/plain' });
+ok(!r.success, 'bukan gambar ditolak');
+r = post('uploadLogo', { fileName: 'logo sekolah.png', base64Data: tinyPng, mimeType: 'image/png' });
+ok(r.success, 'upload logo sukses');
+ok(r.data && r.data.url.startsWith('https://lh3.googleusercontent.com/d/'), 'URL logo format benar');
+r = get('getAllData');
+eq(r.data.pengaturan.logoUrl.startsWith('https://lh3.googleusercontent.com/d/'), true, 'logoUrl tersimpan di Pengaturan');
+// Upload kedua menimpa (tetap 1 key logoUrl)
+const before = get('getAllData').data.pengaturan.logoUrl;
+post('uploadLogo', { fileName: 'logo2.png', base64Data: tinyPng, mimeType: 'image/png' });
+const after = get('getAllData').data.pengaturan.logoUrl;
+ok(after !== before && after.startsWith('https://lh3.googleusercontent.com/d/'), 'logoUrl terupdate (tidak duplikat)');
 
 console.log(`\nHASIL: ${passed} lolos, ${failed} gagal`);
 process.exit(failed > 0 ? 1 : 0);

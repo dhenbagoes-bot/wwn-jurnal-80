@@ -15,8 +15,8 @@ user-friendly, dan responsif untuk laptop maupun HP.
 | 🖨️ Laporan | Rekap siap cetak/PDF + unduh Excel (CSV), lengkap dengan tanda tangan kepala madrasah. |
 | 📊 Rekap | Rekap absensi per siswa per bulan (% kehadiran) + rekap jurnal per guru per bulan. |
 | 🎓 Rubrik Penilaian | Nilai per kelas+mapel: PH 1–10, PTS, PAS, KTR, Sikap → Nilai Akhir otomatis (bobot bisa diatur). Simpan & unduh Excel. |
-| 👥 Kelola Data | CRUD Guru, Mata Pelajaran, Kelas, Siswa (dengan konfirmasi hapus; kelas berisi siswa tidak bisa dihapus). |
-| ⚙️ Pengaturan | Identitas sekolah + bobot penilaian (total harus 100%). |
+| 👥 Kelola Data | CRUD Guru, Mata Pelajaran, Kelas, Siswa (dengan konfirmasi hapus; kelas berisi siswa tidak bisa dihapus). **Impor massal via Excel**: unduh template `.xlsx`, isi, upload — dengan pratinjau & validasi baris (data duplikat otomatis diperbarui, bukan dobel). |
+| ⚙️ Pengaturan | Identitas sekolah + **upload logo** (tampil di beranda, header, dan kop laporan cetak) + bobot penilaian (total harus 100%). |
 | 🔌 Konfigurasi | Status koneksi, URL backend, uji koneksi, inisialisasi 7 sheet, ganti sekolah. |
 
 **Multi-sekolah:** daftar sekolah di `public/schools.json` (satu alamat untuk banyak sekolah, pola sama seperti wwn-bel-80).
@@ -34,7 +34,12 @@ Ganti sekolah lewat nama sekolah di header. Parameter URL `?school=id` memilih s
 2. Buka **Extensions → Apps Script**, **hapus seluruh isi editor**, lalu paste seluruh isi `backend/Kode.gs`.
 3. **Deploy → New deployment → Web app**: *Execute as:* Me, *Who has access:* Anyone. Salin URL `/exec`.
 4. Buka aplikasi → menu **Konfigurasi** → tempel URL → **Simpan URL** → **Uji Koneksi** → **Inisialisasi 7 Sheet**.
-5. Isi data awal di **Kelola Data** (guru, mapel, kelas, siswa) dan **Pengaturan** (identitas + bobot).
+5. Isi data awal di **Kelola Data** (guru, mapel, kelas, siswa — bisa lewat **Template & Upload Excel**) dan **Pengaturan** (identitas + logo + bobot).
+
+> **Catatan izin Drive:** fitur upload logo menyimpan gambar ke Google Drive. Saat pertama kali upload,
+> Google akan meminta izin akses Drive — setujui saja. Jika gagal, buka editor Apps Script, jalankan fungsi
+> `authorizeDriveAccess` sekali, setujui izinnya, lalu coba upload lagi. Untuk update Kode.gs di deployment
+> lama: paste ulang file baru → **Deploy → Manage deployments → Edit → New version**.
 
 ## Deploy ke Vercel
 

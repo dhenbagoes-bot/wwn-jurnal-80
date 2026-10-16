@@ -1,7 +1,9 @@
 import { useMemo, useState } from 'react';
-import { Pencil, Plus, Trash2 } from 'lucide-react';
+import { FileUp, Pencil, Plus, Trash2 } from 'lucide-react';
 import { Button, Card, ConfirmDialog, EmptyState, Field, Modal, PageHeader, SelectInput, TextInput } from '../components/ui';
+import ExcelUploadModal from '../components/ExcelUploadModal';
 import { deleteGuru, deleteKelas, deleteMapel, deleteSiswa, saveGuru, saveKelas, saveMapel, saveSiswa } from '../services/gasApi';
+import type { TemplateKind } from '../utils/excel';
 import type { GuruItem, KelasItem, MapelItem, SiswaItem } from '../types';
 import type { ToastMsg } from '../types';
 import type { PageProps } from './PageProps';
@@ -73,6 +75,31 @@ function BarisAksi({ onEdit, onHapus }: { onEdit: () => void; onHapus: () => voi
   );
 }
 
+/** Tombol Template & Upload Excel — dipakai di semua tab. */
+function TombolImpor({ kind, db, apiUrl, refresh, toast }: SubProps & { kind: TemplateKind }) {
+  const [buka, setBuka] = useState(false);
+  return (
+    <>
+      <Button varian="sekunder" kecil onClick={() => setBuka(true)}>
+        <FileUp className="h-4 w-4" /> Template & Upload
+      </Button>
+      {buka && (
+        <ExcelUploadModal
+          kind={kind}
+          db={db}
+          apiUrl={apiUrl}
+          toast={toast}
+          onTutup={() => setBuka(false)}
+          onSelesai={async () => {
+            await refresh();
+            setBuka(false);
+          }}
+        />
+      )}
+    </>
+  );
+}
+
 interface SubProps {
   db: PageProps['db'];
   apiUrl: string;
@@ -123,7 +150,8 @@ function TabGuru({ db, apiUrl, refresh, toast }: SubProps) {
 
   return (
     <>
-      <div className="mb-3 flex justify-end">
+      <div className="mb-3 flex flex-wrap justify-end gap-2">
+        <TombolImpor kind="guru" db={db} apiUrl={apiUrl} refresh={refresh} toast={toast} />
         <Button kecil onClick={bukaTambah}><Plus className="h-4 w-4" /> Tambah Guru</Button>
       </div>
       {daftar.length === 0 ? <EmptyState judul="Belum ada data guru" /> : (
@@ -217,7 +245,8 @@ function TabMapel({ db, apiUrl, refresh, toast }: SubProps) {
 
   return (
     <>
-      <div className="mb-3 flex justify-end">
+      <div className="mb-3 flex flex-wrap justify-end gap-2">
+        <TombolImpor kind="mapel" db={db} apiUrl={apiUrl} refresh={refresh} toast={toast} />
         <Button kecil onClick={bukaTambah}><Plus className="h-4 w-4" /> Tambah Mapel</Button>
       </div>
       {daftar.length === 0 ? <EmptyState judul="Belum ada data mapel" /> : (
@@ -301,7 +330,8 @@ function TabKelas({ db, apiUrl, refresh, toast }: SubProps) {
 
   return (
     <>
-      <div className="mb-3 flex justify-end">
+      <div className="mb-3 flex flex-wrap justify-end gap-2">
+        <TombolImpor kind="kelas" db={db} apiUrl={apiUrl} refresh={refresh} toast={toast} />
         <Button kecil onClick={bukaTambah}><Plus className="h-4 w-4" /> Tambah Kelas</Button>
       </div>
       {daftar.length === 0 ? <EmptyState judul="Belum ada data kelas" /> : (
@@ -404,7 +434,10 @@ function TabSiswa({ db, apiUrl, refresh, toast, filterKelas, setFilterKelas }: S
             <option key={k.id} value={k.id}>{k.nama}</option>
           ))}
         </SelectInput>
-        <Button kecil onClick={bukaTambah}><Plus className="h-4 w-4" /> Tambah Siswa</Button>
+        <div className="flex flex-wrap gap-2">
+          <TombolImpor kind="siswa" db={db} apiUrl={apiUrl} refresh={refresh} toast={toast} />
+          <Button kecil onClick={bukaTambah}><Plus className="h-4 w-4" /> Tambah Siswa</Button>
+        </div>
       </div>
       {daftar.length === 0 ? <EmptyState judul="Belum ada data siswa" subjudul="Pilih kelas lain atau tambah siswa baru." /> : (
         <Card className="!p-0 overflow-hidden">

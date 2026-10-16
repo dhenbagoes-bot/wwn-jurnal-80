@@ -42,6 +42,23 @@ export default function Dashboard({ db, pindah }: PageProps) {
         }
       />
 
+      {db.pengaturan.logoUrl && (
+        <Card className="mb-4 flex items-center gap-4">
+          <img
+            src={db.pengaturan.logoUrl}
+            alt="Logo sekolah"
+            className="h-16 w-16 shrink-0 rounded-xl border border-slate-200 bg-white object-contain p-1"
+          />
+          <div className="min-w-0">
+            <p className="truncate text-lg font-bold text-slate-900">{db.pengaturan.namaSekolah || 'Jurnal Mengajar Digital'}</p>
+            {db.pengaturan.alamat && <p className="truncate text-xs text-slate-500">{db.pengaturan.alamat}</p>}
+            {db.pengaturan.tahunPelajaran && (
+              <p className="text-xs font-semibold text-emerald-700">Tahun Pelajaran {db.pengaturan.tahunPelajaran}</p>
+            )}
+          </div>
+        </Card>
+      )}
+
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {kartu.map((k) => (
           <Card key={k.label} className="flex items-center gap-3">

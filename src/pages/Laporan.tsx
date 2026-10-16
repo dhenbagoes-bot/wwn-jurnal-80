@@ -120,9 +120,17 @@ export default function Laporan({ db }: PageProps) {
       {/* Area cetak */}
       <div id="print-area">
         <Card className="!p-0 overflow-hidden">
-          <div className="border-b border-slate-200 p-4 text-center">
-            <h2 className="text-lg font-bold uppercase">{db.pengaturan.namaSekolah || 'Laporan Jurnal Mengajar'}</h2>
-            <p className="text-sm text-slate-500">Periode: {periode} • {hasil.length} jurnal</p>
+          <div className="border-b border-slate-200 p-4">
+            <div className="flex items-center justify-center gap-4">
+              {db.pengaturan.logoUrl && (
+                <img src={db.pengaturan.logoUrl} alt="Logo" className="h-16 w-16 shrink-0 object-contain" />
+              )}
+              <div className="text-center">
+                <h2 className="text-lg font-bold uppercase">{db.pengaturan.namaSekolah || 'Laporan Jurnal Mengajar'}</h2>
+                {db.pengaturan.alamat && <p className="text-xs text-slate-500">{db.pengaturan.alamat}</p>}
+                <p className="mt-1 text-sm text-slate-500">Periode: {periode} • {hasil.length} jurnal</p>
+              </div>
+            </div>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full min-w-[820px] text-sm">

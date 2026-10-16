@@ -133,3 +133,11 @@ export async function savePenilaian(
 ): Promise<ApiResult<{ rows: PenilaianItem[] }>> {
   return postAction(apiUrl, { action: 'savePenilaian', rows });
 }
+
+/** Unggah logo ke Google Drive via backend. Mengembalikan URL publik logo. */
+export async function uploadLogo(
+  apiUrl: string,
+  params: { fileName: string; base64Data: string; mimeType: string }
+): Promise<ApiResult<{ fileId: string; url: string }>> {
+  return postAction(apiUrl, { action: 'uploadLogo', ...params });
+}

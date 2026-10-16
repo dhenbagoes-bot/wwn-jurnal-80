@@ -15,6 +15,7 @@ export interface Pengaturan {
   alamat: string;
   tahunPelajaran: string;
   kepalaSekolah: string;
+  logoUrl: string;
   bobotPH: number;
   bobotPTS: number;
   bobotPAS: number;

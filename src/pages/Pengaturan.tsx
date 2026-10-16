@@ -1,7 +1,7 @@
-import { useState } from 'react';
-import { Save } from 'lucide-react';
+import { useRef, useState } from 'react';
+import { ImagePlus, Save, Trash2 } from 'lucide-react';
 import { Button, Card, Field, PageHeader, TextInput } from '../components/ui';
-import { saveSettings } from '../services/gasApi';
+import { saveSettings, uploadLogo } from '../services/gasApi';
 import type { PageProps } from './PageProps';
 
 export default function Pengaturan({ db, apiUrl, refresh, toast }: PageProps) {
@@ -11,6 +11,7 @@ export default function Pengaturan({ db, apiUrl, refresh, toast }: PageProps) {
   const [alamat, setAlamat] = useState(p.alamat);
   const [tahunPelajaran, setTahunPelajaran] = useState(p.tahunPelajaran);
   const [kepalaSekolah, setKepalaSekolah] = useState(p.kepalaSekolah);
+  const [logoUrl, setLogoUrl] = useState(p.logoUrl || '');
   const [bobotPH, setBobotPH] = useState(String(p.bobotPH));
   const [bobotPTS, setBobotPTS] = useState(String(p.bobotPTS));
   const [bobotPAS, setBobotPAS] = useState(String(p.bobotPAS));
@@ -18,12 +19,79 @@ export default function Pengaturan({ db, apiUrl, refresh, toast }: PageProps) {
   const [bobotSikap, setBobotSikap] = useState(String(p.bobotSikap));
   const [err, setErr] = useState('');
   const [menyimpan, setMenyimpan] = useState(false);
+  const [mengunggah, setMengunggah] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const num = (v: string) => {
     const n = parseFloat(v.replace(',', '.'));
     return Number.isNaN(n) ? 0 : n;
   };
   const total = num(bobotPH) + num(bobotPTS) + num(bobotPAS) + num(bobotKTR) + num(bobotSikap);
+
+  const bacaFile = (file: File): Promise<{ base64: string; mime: string }> =>
+    new Promise((resolve, reject) => {
+      const r = new FileReader();
+      r.onerror = () => reject(new Error('Gagal membaca file.'));
+      r.onload = () => {
+        const dataUrl = String(r.result || '');
+        const [head, base64] = dataUrl.split(',');
+        const mime = (head.match(/data:(.*?);/) || [])[1] || file.type || 'image/png';
+        resolve({ base64: base64 || '', mime });
+      };
+      r.readAsDataURL(file);
+    });
+
+  const unggahLogo = async (file: File | undefined) => {
+    if (!file || mengunggah) return;
+    if (!file.type.startsWith('image/')) {
+      toast('error', 'File harus berupa gambar (PNG/JPG).');
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      toast('error', 'Ukuran gambar maksimal 2 MB.');
+      return;
+    }
+    setMengunggah(true);
+    try {
+      const { base64, mime } = await bacaFile(file);
+      const up = await uploadLogo(apiUrl, { fileName: file.name, base64Data: base64, mimeType: mime });
+      if (!up.success || !up.data?.url) {
+        toast('error', up.error || up.message || 'Gagal mengunggah logo.');
+        return;
+      }
+      // Simpan URL logo ke pengaturan
+      const simpan = await saveSettings(apiUrl, { ...db.pengaturan, logoUrl: up.data.url });
+      if (simpan.success) {
+        setLogoUrl(up.data.url);
+        toast('sukses', 'Logo berhasil diunggah dan disimpan.');
+        await refresh();
+      } else {
+        toast('error', 'Logo terunggah, tetapi gagal menyimpan ke pengaturan.');
+      }
+    } catch {
+      toast('error', 'Terjadi kesalahan saat mengunggah logo.');
+    } finally {
+      setMengunggah(false);
+    }
+  };
+
+  const hapusLogo = async () => {
+    setMenyimpan(true);
+    try {
+      const res = await saveSettings(apiUrl, { ...db.pengaturan, logoUrl: '' });
+      if (res.success) {
+        setLogoUrl('');
+        toast('sukses', 'Logo dihapus.');
+        await refresh();
+      } else {
+        toast('error', res.error || 'Gagal menghapus logo.');
+      }
+    } catch {
+      toast('error', 'Terjadi kesalahan.');
+    } finally {
+      setMenyimpan(false);
+    }
+  };
 
   const simpan = async () => {
     if (!namaSekolah.trim()) { setErr('Nama sekolah wajib diisi.'); return; }
@@ -37,6 +105,7 @@ export default function Pengaturan({ db, apiUrl, refresh, toast }: PageProps) {
         alamat: alamat.trim(),
         tahunPelajaran: tahunPelajaran.trim(),
         kepalaSekolah: kepalaSekolah.trim(),
+        logoUrl: logoUrl.trim(),
         bobotPH: num(bobotPH),
         bobotPTS: num(bobotPTS),
         bobotPAS: num(bobotPAS),
@@ -105,6 +174,43 @@ export default function Pengaturan({ db, apiUrl, refresh, toast }: PageProps) {
           {err && <p className="mt-3 text-sm text-red-600">{err}</p>}
         </Card>
       </div>
+
+      {/* Logo sekolah */}
+      <Card className="mt-4">
+        <h2 className="mb-1 font-bold text-slate-900">Logo Sekolah</h2>
+        <p className="mb-4 text-xs text-slate-500">
+          Logo tampil di beranda dan kop laporan cetak. Format PNG/JPG, maksimal 2 MB.
+        </p>
+        <div className="flex flex-wrap items-center gap-4">
+          <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
+            {logoUrl ? (
+              <img src={logoUrl} alt="Logo sekolah" className="h-full w-full object-contain" />
+            ) : (
+              <span className="px-2 text-center text-xs text-slate-400">Belum ada logo</span>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button varian="sekunder" kecil onClick={() => fileRef.current?.click()} loading={mengunggah}>
+              <ImagePlus className="h-4 w-4" /> {logoUrl ? 'Ganti Logo' : 'Unggah Logo'}
+            </Button>
+            {logoUrl && (
+              <Button varian="bahaya" kecil onClick={hapusLogo} disabled={mengunggah || menyimpan}>
+                <Trash2 className="h-4 w-4" /> Hapus
+              </Button>
+            )}
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/png,image/jpeg,image/jpg"
+              className="hidden"
+              onChange={(e) => {
+                unggahLogo(e.target.files?.[0]);
+                e.target.value = '';
+              }}
+            />
+          </div>
+        </div>
+      </Card>
 
       <div className="mt-4">
         <Button onClick={simpan} loading={menyimpan} className="w-full sm:w-auto sm:px-10">

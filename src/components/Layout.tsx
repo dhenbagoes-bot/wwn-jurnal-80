@@ -55,6 +55,7 @@ export function Layout({
   daftarSekolah,
   onGantiSekolah,
   terhubung,
+  logoUrl,
   children,
 }: {
   page: PageKey;
@@ -63,6 +64,7 @@ export function Layout({
   daftarSekolah: SchoolEntry[];
   onGantiSekolah: (s: SchoolEntry) => void;
   terhubung: boolean;
+  logoUrl?: string;
   children: ReactNode;
 }) {
   const jam = useJam();
@@ -80,8 +82,12 @@ export function Layout({
       {/* ===== Header ===== */}
       <header className="sticky top-0 z-40 border-b border-emerald-700 bg-emerald-700 text-white shadow-md">
         <div className="mx-auto flex max-w-7xl items-center gap-3 px-3 py-2.5 sm:px-6">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/15 text-2xl">
-            📝
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white/15 text-2xl">
+            {logoUrl ? (
+              <img src={logoUrl} alt="Logo" className="h-full w-full bg-white object-contain" />
+            ) : (
+              '📝'
+            )}
           </div>
           <div className="min-w-0 flex-1">
             <button

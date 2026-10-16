@@ -44,6 +44,7 @@ var DEFAULT_PENGATURAN = [
   ['alamat', ''],
   ['tahunPelajaran', '2026/2027'],
   ['kepalaSekolah', ''],
+  ['logoUrl', ''],
   ['bobotPH', '40'],
   ['bobotPTS', '20'],
   ['bobotPAS', '20'],
@@ -141,6 +142,11 @@ function doPost(e) {
       case 'savePenilaian': {
         var rows = savePenilaianRows(ss, payload.rows || []);
         return jsonResponse({ success: true, message: 'Nilai berhasil disimpan (' + rows.length + ' siswa).', data: { rows: rows } });
+      }
+
+      case 'uploadLogo': {
+        var up = uploadLogoFile(ss, payload);
+        return jsonResponse({ success: up.success, message: up.message, error: up.error, data: up.data });
       }
 
       default:
@@ -287,6 +293,7 @@ function getSettings(ss) {
     alamat: map.alamat || '',
     tahunPelajaran: map.tahunPelajaran || '',
     kepalaSekolah: map.kepalaSekolah || '',
+    logoUrl: map.logoUrl || '',
     bobotPH: num('bobotPH', 40),
     bobotPTS: num('bobotPTS', 20),
     bobotPAS: num('bobotPAS', 20),
@@ -297,7 +304,7 @@ function getSettings(ss) {
 
 function saveSettings(ss, pengaturan) {
   var sheet = getPengaturanSheet(ss);
-  var keys = ['namaSekolah', 'npsn', 'alamat', 'tahunPelajaran', 'kepalaSekolah',
+  var keys = ['namaSekolah', 'npsn', 'alamat', 'tahunPelajaran', 'kepalaSekolah', 'logoUrl',
     'bobotPH', 'bobotPTS', 'bobotPAS', 'bobotKTR', 'bobotSikap'];
   for (var i = 0; i < keys.length; i++) {
     var k = keys[i];
@@ -637,6 +644,78 @@ function savePenilaianRows(ss, rows) {
     saved.push(penilaianRowToObj(row));
   }
   return saved;
+}
+
+// ============================================================
+// UPLOAD LOGO KE GOOGLE DRIVE
+// ============================================================
+
+/**
+ * Jalankan manual sekali dari editor Apps Script untuk memberi izin Drive.
+ * (Izin otomatis diminta saat uploadLogo pertama kali; fungsi ini hanya jalan pintas.)
+ */
+function authorizeDriveAccess() {
+  var folders = DriveApp.getFoldersByName('JurnalMengajar_Files');
+  return 'OK — akses Drive aktif. Jumlah folder: ' + (folders.hasNext() ? 1 : 0);
+}
+
+/**
+ * Terima {fileName, base64Data, mimeType} → simpan ke Drive → simpan URL di Pengaturan.logoUrl.
+ * Mengembalikan {success, message, error, data:{fileId, url}}.
+ */
+function uploadLogoFile(ss, payload) {
+  try {
+    var rawName = asString(payload.fileName) || ('logo_' + Date.now() + '.png');
+    var cleanName = rawName.replace(/[^a-zA-Z0-9._-]/g, '_');
+    var base64Data = asString(payload.base64Data);
+    var mimeType = asString(payload.mimeType) || 'image/png';
+
+    if (!base64Data) {
+      return { success: false, message: 'Data gambar kosong.' };
+    }
+    if (!/^image\//.test(mimeType)) {
+      return { success: false, message: 'File harus berupa gambar (PNG/JPG).' };
+    }
+    // Batas 2 MB (base64 ~2.7 juta karakter)
+    if (base64Data.length > 2800000) {
+      return { success: false, message: 'Ukuran gambar maksimal 2 MB.' };
+    }
+
+    var folderName = 'JurnalMengajar_Files';
+    var folder;
+    try {
+      var folders = DriveApp.getFoldersByName(folderName);
+      folder = folders.hasNext() ? folders.next() : DriveApp.createFolder(folderName);
+    } catch (permErr) {
+      return {
+        success: false,
+        message: 'Izin Google Drive belum diberikan. Buka editor Apps Script, jalankan fungsi "authorizeDriveAccess", lalu setujui izinnya.',
+        error: String(permErr)
+      };
+    }
+    try { folder.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW); } catch (e1) {}
+
+    var cleanBase64 = base64Data.indexOf(',') > -1 ? base64Data.split(',')[1] : base64Data;
+    var blob = Utilities.newBlob(Utilities.base64Decode(cleanBase64), mimeType, cleanName);
+    var file = folder.createFile(blob);
+    try { file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW); } catch (e2) {}
+
+    var fileId = file.getId();
+    var logoUrl = 'https://lh3.googleusercontent.com/d/' + fileId;
+
+    // Simpan ke Pengaturan.logoUrl
+    var sheet = getPengaturanSheet(ss);
+    var rowNum = findRowByKey(sheet, 'logoUrl');
+    if (rowNum > 0) {
+      sheet.getRange(rowNum, 2).setValue(logoUrl);
+    } else {
+      sheet.appendRow(['logoUrl', logoUrl]);
+    }
+
+    return { success: true, message: 'Logo berhasil diunggah.', data: { fileId: fileId, url: logoUrl } };
+  } catch (err) {
+    return { success: false, message: 'Gagal mengunggah logo: ' + err.message, error: String(err) };
+  }
 }
 
 // ============================================================

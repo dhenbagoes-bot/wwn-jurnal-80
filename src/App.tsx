@@ -19,7 +19,7 @@ const LS_URL_PREFIX = 'wwn-jurnal-80:apiurl:';
 
 const DB_KOSONG: AppDatabase = {
   pengaturan: {
-    namaSekolah: '', npsn: '', alamat: '', tahunPelajaran: '', kepalaSekolah: '',
+    namaSekolah: '', npsn: '', alamat: '', tahunPelajaran: '', kepalaSekolah: '', logoUrl: '',
     bobotPH: 40, bobotPTS: 20, bobotPAS: 20, bobotKTR: 10, bobotSikap: 10,
   },
   guru: [], mapel: [], kelas: [], siswa: [], jurnal: [], penilaian: [],
@@ -240,6 +240,7 @@ export default function App() {
         daftarSekolah={daftarSekolah}
         onGantiSekolah={gantiSekolah}
         terhubung={!!database?.connected && !galat}
+        logoUrl={db.pengaturan.logoUrl}
       >
         {memuatAwal ? (
           <LoadingBlock teks="Memuat data dari Google Spreadsheet..." />
